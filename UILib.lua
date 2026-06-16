@@ -223,6 +223,7 @@ function Library:CreateWindow(titleText, subtitleText)
 	end
 
 	-- МЕТОД: Создание Выпадающего Списка (Dropdown)
+	-- МЕТОД: Создание Выпадающего Списка (Dropdown) - ИСПРАВЛЕННЫЙ
 	function WindowObj:AddDropdown(parent, labelText, defaultOption, optionsList, callback)
 		local targetParent = parent or scroll
 		local item = Instance.new("Frame", targetParent)
@@ -266,15 +267,17 @@ function Library:CreateWindow(titleText, subtitleText)
 		s.Color = Color3.fromRGB(38, 42, 48)
 		applyHover(s, Color3.fromRGB(0, 162, 255), Color3.fromRGB(38, 42, 48), "Color")
 
-		local dropList = Instance.new("Frame", screen)
+		-- ИСПРАВЛЕНИЕ: Теперь dropList создается внутри главного фрейма (main), чтобы не терять фокус ввода
+		local dropList = Instance.new("Frame", main)
 		dropList.BackgroundColor3 = Color3.fromRGB(24, 26, 30)
-		dropList.Size = UDim2.new(0, 120, 0, #optionsList * 28)
 		dropList.Visible = false
-		dropList.ZIndex = 100
+		dropList.ZIndex = 500 -- Повышенный приоритет, чтобы список перекрывал другие кнопки в скролле
 		
 		Instance.new("UICorner", dropList).CornerRadius = UDim.new(0, 6)
-		Instance.new("UIStroke", dropList).Color = Color3.fromRGB(45, 50, 58)
-		Instance.new("UIListLayout", dropList)
+		local dStroke = Instance.new("UIStroke", dropList)
+		dStroke.Color = Color3.fromRGB(45, 50, 58)
+		
+		local dList = Instance.new("UIListLayout", dropList)
 
 		for _, opt in ipairs(optionsList) do
 			local oBtn = Instance.new("TextButton", dropList)
@@ -284,8 +287,8 @@ function Library:CreateWindow(titleText, subtitleText)
 			oBtn.Text = opt
 			oBtn.TextColor3 = Color3.fromRGB(0, 162, 255)
 			oBtn.TextSize = 12
-			oBtn.ZIndex = 101
-			
+			oBtn.ZIndex = 501
+
 			oBtn.MouseButton1Click:Connect(function()
 				dropBtn.Text = opt
 				dropList.Visible = false
@@ -293,19 +296,27 @@ function Library:CreateWindow(titleText, subtitleText)
 				callback(opt)
 			end)
 		end
+		
+		-- Динамически подгоняем высоту под количество элементов
+		dropList.Size = UDim2.new(0, 120, 0, #optionsList * 28)
 
 		dropBtn.MouseButton1Click:Connect(function()
-			if Library.ActiveDropdown and Library.ActiveDropdown ~= dropList then
-				Library.ActiveDropdown.Visible = false
+			if Library.ActiveDropdown and Library.ActiveDropdown ~= dropList then 
+				Library.ActiveDropdown.Visible = false 
 			end
-			dropList.Position = UDim2.new(0, dropBtn.AbsolutePosition.X, 0, dropBtn.AbsolutePosition.Y + dropBtn.AbsoluteSize.Y + 35)
+			
+			-- ИСПРАВЛЕНИЕ: Точный расчет позиции относительно родительского окна (main)
+			local targetX = dropBtn.AbsolutePosition.X - main.AbsolutePosition.X
+			local targetY = dropBtn.AbsolutePosition.Y - main.AbsolutePosition.Y + dropBtn.AbsoluteSize.Y + 4
+			
+			dropList.Position = UDim2.new(0, targetX, 0, targetY)
 			dropList.Visible = not dropList.Visible
 			Library.ActiveDropdown = dropList.Visible and dropList or nil
 		end)
 		
 		updateScroll()
 	end
-
+	
 	-- МЕТОД: Создание Блока-Таблицы (Категории)
 	function WindowObj:AddTableBlock(titleText)
 		local categoryBox = Instance.new("Frame", scroll)
