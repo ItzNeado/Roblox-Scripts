@@ -1,136 +1,210 @@
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
-local Library = {}
-Library.ActiveDropdown = nil
+local Library = {
+    ActiveDropdown = nil,
+    Flags = {},
+    Signals = {}
+}
 
--- Хелпер для анимации наведения
+-- Плавная анимация наведения
 local function applyHover(instance, enterColor, leaveColor, property)
-	instance.MouseEnter:Connect(function()
-		TweenService:Create(instance, TweenInfo.new(0.2), {[property] = enterColor}):Play()
-	end)
-	instance.MouseLeave:Connect(function()
-		TweenService:Create(instance, TweenInfo.new(0.2), {[property] = leaveColor}):Play()
-	end)
+    instance.MouseEnter:Connect(function()
+        TweenService:Create(instance, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {[property] = enterColor}):Play()
+    end)
+    instance.MouseLeave:Connect(function()
+        TweenService:Create(instance, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {[property] = leaveColor}):Play()
+    end)
 end
 
 -- Создание Главного Окна
 function Library:CreateWindow(titleText, subtitleText)
-	if _G.GUI_MAIN then _G.GUI_MAIN:Destroy() end
-	local GUI = gethui() or game:GetService("CoreGui")
+    if _G.GUI_MAIN then _G.GUI_MAIN:Destroy() end
+    local GUI = gethui() or game:GetService("CoreGui")
 
-	local guiFolder = GUI:FindFirstChild("GuiFolder") or Instance.new("Folder", GUI)
-	guiFolder.Name = "GuiFolder"
+    local guiFolder = GUI:FindFirstChild("GuiFolder") or Instance.new("Folder", GUI)
+    guiFolder.Name = "GuiFolder"
 
-	local screen = Instance.new("ScreenGui", guiFolder)
-	screen.Name = "CustomUILibrary"
-	_G.GUI_MAIN = screen
+    local screen = Instance.new("ScreenGui", guiFolder)
+    screen.Name = "CustomRayfieldStyleLib"
+    screen.ResetOnSpawn = false
+    _G.GUI_MAIN = screen
 
-	-- Главный Фрейм
-	local main = Instance.new("Frame", screen)
-	main.Name = "MainFrame"
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
-	main.Position = UDim2.new(0.5, 0, 0.5, 0)
-	main.Size = UDim2.new(0, 520, 0, 580)
-	main.BackgroundColor3 = Color3.fromRGB(15, 16, 18)
-	
-	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-	local stroke = Instance.new("UIStroke", main)
-	stroke.Thickness = 1
-	stroke.Color = Color3.fromRGB(35, 38, 43)
+    -- Слой для всплывающих элементов (Dropdown / Поповеры), чтобы они ВСЕГДА были сверху
+    local popoverLayer = Instance.new("Frame", screen)
+    popoverLayer.Name = "PopoverLayer"
+    popoverLayer.Size = UDim2.new(1, 0, 1, 0)
+    popoverLayer.BackgroundTransparency = 1
+    popoverLayer.ZIndex = 1000
 
-	-- Скрипт Перетаскивания (Drag) окна мышкой
-	local dragging, dragInput, dragStart, startPos
-	main.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true; dragStart = input.Position; startPos = main.Position
-			input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-		end
-	end)
-	main.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-	end)
-	UIS.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end)
+    -- Главный Фрейм
+    local main = Instance.new("Frame", screen)
+    main.Name = "MainFrame"
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
+    main.Size = UDim2.new(0, 520, 0, 580)
+    main.BackgroundColor3 = Color3.fromRGB(15, 16, 18)
+    main.Active = true
+    
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+    local stroke = Instance.new("UIStroke", main)
+    stroke.Thickness = 1
+    stroke.Color = Color3.fromRGB(35, 38, 43)
 
-	-- Хедер (Шапка)
-	local header = Instance.new("Frame", main)
-	header.Size = UDim2.new(1, 0, 0, 65)
-	header.BackgroundTransparency = 1
+    -- Скрипт Перетаскивания (Drag) из Rayfield
+    local dragging, dragInput, dragStart, startPos
+    main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = main.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 
-	local title = Instance.new("TextLabel", header)
-	title.Position = UDim2.new(0, 20, 0, 15)
-	title.Size = UDim2.new(0.5, 0, 0, 24)
-	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.Text = titleText
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 18
-	title.TextXAlignment = Enum.TextXAlignment.Left
+    -- Хедер (Шапка)
+    local header = Instance.new("Frame", main)
+    header.Size = UDim2.new(1, 0, 0, 65)
+    header.BackgroundTransparency = 1
 
-	local subtitle = Instance.new("TextLabel", header)
-	subtitle.Position = UDim2.new(0, 20, 0, 38)
-	subtitle.Size = UDim2.new(0.5, 0, 0, 18)
-	subtitle.BackgroundTransparency = 1
-	subtitle.TextColor3 = Color3.fromRGB(0, 162, 255)
-	subtitle.Text = subtitleText
-	subtitle.Font = Enum.Font.GothamSemibold
-	subtitle.TextSize = 13
-	subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    local title = Instance.new("TextLabel", header)
+    title.Position = UDim2.new(0, 20, 0, 15)
+    title.Size = UDim2.new(0.5, 0, 0, 24)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Text = titleText
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Контейнер со скроллом
-	local scroll = Instance.new("ScrollingFrame", main)
-	scroll.Size = UDim2.new(1, -10, 1, -80)
-	scroll.Position = UDim2.new(0, 5, 0, 70)
-	scroll.BackgroundTransparency = 1
-	scroll.BorderSizePixel = 0
-	scroll.ScrollBarThickness = 4
-	scroll.ScrollBarImageColor3 = Color3.fromRGB(45, 48, 53)
+    local subtitle = Instance.new("TextLabel", header)
+    subtitle.Position = UDim2.new(0, 20, 0, 38)
+    subtitle.Size = UDim2.new(0.5, 0, 0, 18)
+    subtitle.BackgroundTransparency = 1
+    subtitle.TextColor3 = Color3.fromRGB(0, 162, 255)
+    subtitle.Text = subtitleText
+    subtitle.Font = Enum.Font.GothamSemibold
+    subtitle.TextSize = 13
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
 
-	local uiList = Instance.new("UIListLayout", scroll)
-	uiList.SortOrder = Enum.SortOrder.LayoutOrder
-	uiList.Padding = UDim.new(0, 8)
+    -- Контейнер со скроллом
+    local scroll = Instance.new("ScrollingFrame", main)
+    scroll.Size = UDim2.new(1, -10, 1, -80)
+    scroll.Position = UDim2.new(0, 5, 0, 70)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 4
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(45, 48, 53)
+    scroll.ClipsDescendants = true
 
-	local uiPad = Instance.new("UIPadding", scroll)
-	uiPad.PaddingLeft = UDim.new(0, 15)
-	uiPad.PaddingRight = UDim.new(0, 15)
-	uiPad.PaddingTop = UDim.new(0, 5)
-	uiPad.PaddingBottom = UDim.new(0, 15)
+    local uiList = Instance.new("UIListLayout", scroll)
+    uiList.SortOrder = Enum.SortOrder.LayoutOrder
+    uiList.Padding = UDim.new(0, 8)
 
-	-- Функция автоматического обновления размера скролла
-	local function updateScroll()
-		local size = 0
-		for _, c in ipairs(scroll:GetChildren()) do
-			if c:IsA("Frame") then size = size + c.Size.Y.Offset + 8 end
-		end
-		scroll.CanvasSize = UDim2.new(0, 0, 0, size + 40)
-	end
-	uiList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScroll)
+    local uiPad = Instance.new("UIPadding", scroll)
+    uiPad.PaddingLeft = UDim.new(0, 15)
+    uiPad.PaddingRight = UDim.new(0, 15)
+    uiPad.PaddingTop = UDim.new(0, 5)
+    uiPad.PaddingBottom = UDim.new(0, 15)
 
-	-- Кнопка закрытия на клавишу Insert
-	UIS.InputBegan:Connect(function(input, gpe)
-		if not gpe and input.KeyCode == Enum.KeyCode.Insert then
-			screen.Enabled = not screen.Enabled
-		end
-	end)
+    -- Rayfield-style автообновление высоты скролла
+    local function updateScroll()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, uiList.AbsoluteContentSize.Y + 30)
+    end
+    uiList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScroll)
 
-	local WindowObj = {Scroll = scroll, Screen = screen, Subtitle = subtitle}
+    -- Свернуть на Insert
+    UIS.InputBegan:Connect(function(input, gpe)
+        if not gpe and input.KeyCode == Enum.KeyCode.Insert then
+            screen.Enabled = not screen.Enabled
+        end
+    end)
 
-	-- МЕТОД: Создание Поля Ввода (TextBox / Number)
-	function WindowObj:AddTextBox(parent, labelText, defaultText, callback)
-		local targetParent = parent or scroll
-		local item = Instance.new("Frame", targetParent)
-		item.Size = UDim2.new(1, 0, 0, 38)
-		item.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
-		Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
-		
-		local p = Instance.new("UIPadding", item)
-		p.PaddingLeft = UDim.new(0, 12)
-		p.PaddingRight = UDim.new(0, 12)
+    -- Закрытие дропдаунов при клике мимо окон в пустую зону
+    UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and Library.ActiveDropdown then
+            local mousePos = UIS:GetMouseLocation()
+            local db = Library.ActiveDropdown
+            if mousePos.X < db.AbsolutePosition.X or mousePos.X > (db.AbsolutePosition.X + db.AbsoluteSize.X) or
+               mousePos.Y < db.AbsolutePosition.Y or mousePos.Y > (db.AbsolutePosition.Y + db.AbsoluteSize.Y) then
+                db.Visible = false
+                Library.ActiveDropdown = nil
+            end
+        end
+    end)
+
+    local WindowObj = {Scroll = scroll, Screen = screen, Subtitle = subtitle}
+
+    -- МЕТОД: Добавление TextBox (Поле ввода)
+    function WindowObj:AddTextBox(parent, labelText, defaultText, callback)
+        local targetParent = parent or scroll
+        local item = Instance.new("Frame", targetParent)
+        item.Size = UDim2.new(1, 0, 0, 38)
+        item.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
+        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
+        
+        local p = Instance.new("UIPadding", item)
+        p.PaddingLeft = UDim.new(0, 12)
+        p.PaddingRight = UDim.new(0, 12)
+
+        local lbl = Instance.new("TextLabel", item)
+        lbl.Size = UDim2.new(0.6, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.GothamSemibold
+        lbl.Text = labelText
+        lbl.TextColor3 = Color3.fromRGB(160, 165, 175)
+        lbl.TextSize = 13
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+        local align = Instance.new("Frame", item)
+        align.Size = UDim2.new(0.4, 0, 1, 0)
+        align.Position = UDim2.new(0.6, 0, 0, 0)
+        align.BackgroundTransparency = 1
+        
+        local al = Instance.new("UIListLayout", align)
+        al.FillDirection = Enum.FillDirection.Horizontal
+        al.HorizontalAlignment = Enum.HorizontalAlignment.Right
+        al.VerticalAlignment = Enum.VerticalAlignment.Center
+
+        local box = Instance.new("TextBox", align)
+        box.Size = UDim2.new(0, 90, 0, 28)
+        box.BackgroundColor3 = Color3.fromRGB(24, 26, 30)
+        box.Font = Enum.Font.Code
+        box.Text = tostring(defaultText)
+        box.TextColor3 = Color3.fromRGB(130, 220, 110)
+        box.TextSize = 12
+        box.ClearTextOnFocus = false
+        Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+        
+        local s = Instance.new("UIStroke", box)
+        s.Color = Color3.fromRGB(38, 42, 48)
+
+        box.Focused:Connect(function() TweenService:Create(s, TweenInfo.new(0.15), {Color = Color3.fromRGB(0, 162, 255)}):Play() end)
+        box.FocusLost:Connect(function()
+            TweenService:Create(s, TweenInfo.new(0.15), {Color = Color3.fromRGB(38, 42, 48)}):Play()
+            callback(box.Text)
+        end)
+        updateScroll()
+    end
+
+    -- МЕТОД: Добавление Тоббла (ON/OFF)
+    function WindowObj:AddToggle(parent, labelText, defaultState, callback)
+        local targetParent = parent or scroll
+        local item = Instance.new("Frame", targetParent)
+        item.Size = UDim2.new(1, 0, 0, 38)
+        item.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
+        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
+        
+        local p = Instance.new("UIPadding", item)
+        p.PaddingLeft = UDim.new(0, 12)
+        p.PaddingRight = UDim.new(0, 12)
 
 		local lbl = Instance.new("TextLabel", item)
 		lbl.Size = UDim2.new(0.6, 0, 1, 0)
@@ -141,89 +215,36 @@ function Library:CreateWindow(titleText, subtitleText)
 		lbl.TextSize = 13
 		lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-		local align = Instance.new("Frame", item)
-		align.Size = UDim2.new(0.4, 0, 1, 0)
-		align.Position = UDim2.new(0.6, 0, 0, 0)
-		align.BackgroundTransparency = 1
-		
-		local al = Instance.new("UIListLayout", align)
-		al.FillDirection = Enum.FillDirection.Horizontal
-		al.HorizontalAlignment = Enum.HorizontalAlignment.Right
-		al.VerticalAlignment = Enum.VerticalAlignment.Center
+        local align = Instance.new("Frame", item)
+        align.Size = UDim2.new(0.4, 0, 1, 0)
+        align.Position = UDim2.new(0.6, 0, 0, 0)
+        align.BackgroundTransparency = 1
+        
+        local al = Instance.new("UIListLayout", align)
+        al.FillDirection = Enum.FillDirection.Horizontal
+        al.HorizontalAlignment = Enum.HorizontalAlignment.Right
+        al.VerticalAlignment = Enum.VerticalAlignment.Center
 
-		local box = Instance.new("TextBox", align)
-		box.Size = UDim2.new(0, 90, 0, 28)
-		box.BackgroundColor3 = Color3.fromRGB(24, 26, 30)
-		box.Font = Enum.Font.Code
-		box.Text = tostring(defaultText)
-		box.TextColor3 = Color3.fromRGB(130, 220, 110)
-		box.TextSize = 12
-		box.ClearTextOnFocus = false
-		Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
-		
-		local s = Instance.new("UIStroke", box)
-		s.Color = Color3.fromRGB(38, 42, 48)
+        local state = defaultState
+        local toggle = Instance.new("TextButton", align)
+        toggle.Size = UDim2.new(0, 60, 0, 26)
+        toggle.BackgroundColor3 = state and Color3.fromRGB(0, 150, 90) or Color3.fromRGB(40, 43, 48)
+        toggle.Text = state and "ON" or "OFF"
+        toggle.Font = Enum.Font.GothamBold
+        toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        toggle.TextSize = 11
+        Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 13)
 
-		box.Focused:Connect(function() TweenService:Create(s, TweenInfo.new(0.2), {Color = Color3.fromRGB(0, 162, 255)}):Play() end)
-		box.FocusLost:Connect(function()
-			TweenService:Create(s, TweenInfo.new(0.2), {Color = Color3.fromRGB(38, 42, 48)}):Play()
-			callback(box.Text)
-		end)
-		updateScroll()
-	end
+        toggle.MouseButton1Click:Connect(function()
+            state = not state
+            toggle.Text = state and "ON" or "OFF"
+            TweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = state and Color3.fromRGB(0, 150, 90) or Color3.fromRGB(40, 43, 48)}):Play()
+            callback(state)
+        end)
+        updateScroll()
+    end
 
-	-- МЕТОД: Создание Кнопки-Переключателя (Toggle)
-	function WindowObj:AddToggle(parent, labelText, defaultState, callback)
-		local targetParent = parent or scroll
-		local item = Instance.new("Frame", targetParent)
-		item.Size = UDim2.new(1, 0, 0, 38)
-		item.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
-		Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
-		
-		local p = Instance.new("UIPadding", item)
-		p.PaddingLeft = UDim.new(0, 12)
-		p.PaddingRight = UDim.new(0, 12)
-
-		local lbl = Instance.new("TextLabel", item)
-		lbl.Size = UDim2.new(0.6, 0, 1, 0)
-		lbl.BackgroundTransparency = 1
-		lbl.Font = Enum.Font.GothamSemibold
-		lbl.Text = labelText
-		lbl.TextColor3 = Color3.fromRGB(160, 165, 175)
-		lbl.TextSize = 13
-		lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-		local align = Instance.new("Frame", item)
-		align.Size = UDim2.new(0.4, 0, 1, 0)
-		align.Position = UDim2.new(0.6, 0, 0, 0)
-		align.BackgroundTransparency = 1
-		
-		local al = Instance.new("UIListLayout", align)
-		al.FillDirection = Enum.FillDirection.Horizontal
-		al.HorizontalAlignment = Enum.HorizontalAlignment.Right
-		al.VerticalAlignment = Enum.VerticalAlignment.Center
-
-		local state = defaultState
-		local toggle = Instance.new("TextButton", align)
-		toggle.Size = UDim2.new(0, 60, 0, 26)
-		toggle.BackgroundColor3 = state and Color3.fromRGB(0, 150, 90) or Color3.fromRGB(40, 43, 48)
-		toggle.Text = state and "ON" or "OFF"
-		toggle.Font = Enum.Font.GothamBold
-		toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-		toggle.TextSize = 11
-		Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 13)
-
-		toggle.MouseButton1Click:Connect(function()
-			state = not state
-			toggle.Text = state and "ON" or "OFF"
-			TweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = state and Color3.fromRGB(0, 150, 90) or Color3.fromRGB(40, 43, 48)}):Play()
-			callback(state)
-		end)
-		updateScroll()
-	end
-
-	-- МЕТОД: Создание Выпадающего Списка (Dropdown)
-	-- МЕТОД: Создание Выпадающего Списка (Dropdown) - ИСПРАВЛЕННЫЙ
+	-- МЕТОД: Создание Выпадающего Списка (Dropdown) - ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ
 	function WindowObj:AddDropdown(parent, labelText, defaultOption, optionsList, callback)
 		local targetParent = parent or scroll
 		local item = Instance.new("Frame", targetParent)
@@ -267,17 +288,19 @@ function Library:CreateWindow(titleText, subtitleText)
 		s.Color = Color3.fromRGB(38, 42, 48)
 		applyHover(s, Color3.fromRGB(0, 162, 255), Color3.fromRGB(38, 42, 48), "Color")
 
-		-- ИСПРАВЛЕНИЕ: Теперь dropList создается внутри главного фрейма (main), чтобы не терять фокус ввода
-		local dropList = Instance.new("Frame", main)
+		-- Архитектура Rayfield: Список создается на глобальном Popover-слое, чтобы его ничего не перекрывало
+		local dropList = Instance.new("Frame", popoverLayer)
+		dropList.Name = "DropdownWindow"
 		dropList.BackgroundColor3 = Color3.fromRGB(24, 26, 30)
+		dropList.Size = UDim2.new(0, 120, 0, #optionsList * 28)
 		dropList.Visible = false
-		dropList.ZIndex = 500 -- Повышенный приоритет, чтобы список перекрывал другие кнопки в скролле
+		dropList.Active = true
+		dropList.ZIndex = 1005
 		
 		Instance.new("UICorner", dropList).CornerRadius = UDim.new(0, 6)
-		local dStroke = Instance.new("UIStroke", dropList)
-		dStroke.Color = Color3.fromRGB(45, 50, 58)
+		Instance.new("UIStroke", dropList).Color = Color3.fromRGB(45, 50, 58)
 		
-		local dList = Instance.new("UIListLayout", dropList)
+		local dListLayout = Instance.new("UIListLayout", dropList)
 
 		for _, opt in ipairs(optionsList) do
 			local oBtn = Instance.new("TextButton", dropList)
@@ -287,8 +310,8 @@ function Library:CreateWindow(titleText, subtitleText)
 			oBtn.Text = opt
 			oBtn.TextColor3 = Color3.fromRGB(0, 162, 255)
 			oBtn.TextSize = 12
-			oBtn.ZIndex = 501
-
+			oBtn.ZIndex = 1006
+			
 			oBtn.MouseButton1Click:Connect(function()
 				dropBtn.Text = opt
 				dropList.Visible = false
@@ -296,28 +319,33 @@ function Library:CreateWindow(titleText, subtitleText)
 				callback(opt)
 			end)
 		end
-		
-		-- Динамически подгоняем высоту под количество элементов
-		dropList.Size = UDim2.new(0, 120, 0, #optionsList * 28)
+
+		-- Точное вычисление координат на экране (Rayfield Absolute Position Fix)
+		local function positionateList()
+			local guiInset = game:GetService("GuiService"):GetGuiInset()
+			dropList.Position = UDim2.new(0, dropBtn.AbsolutePosition.X, 0, dropBtn.AbsolutePosition.Y - guiInset.Y + dropBtn.AbsoluteSize.Y + 2)
+		end
 
 		dropBtn.MouseButton1Click:Connect(function()
-			if Library.ActiveDropdown and Library.ActiveDropdown ~= dropList then 
-				Library.ActiveDropdown.Visible = false 
+			if Library.ActiveDropdown and Library.ActiveDropdown ~= dropList then
+				Library.ActiveDropdown.Visible = false
 			end
-			
-			-- ИСПРАВЛЕНИЕ: Точный расчет позиции относительно родительского окна (main)
-			local targetX = dropBtn.AbsolutePosition.X - main.AbsolutePosition.X
-			local targetY = dropBtn.AbsolutePosition.Y - main.AbsolutePosition.Y + dropBtn.AbsoluteSize.Y + 4
-			
-			dropList.Position = UDim2.new(0, targetX, 0, targetY)
+			positionateList()
 			dropList.Visible = not dropList.Visible
 			Library.ActiveDropdown = dropList.Visible and dropList or nil
 		end)
-		
+
+		-- Если окно чита перетаскивают, обновляем позицию открытого списка
+		main:GetPropertyChangedSignal("Position"):Connect(function()
+			if dropList.Visible then 
+				positionateList() 
+			end
+		end)
+
 		updateScroll()
 	end
-	
-	-- МЕТОД: Создание Блока-Таблицы (Категории)
+
+	-- МЕТОД: Создание Категории / Табличного Блока
 	function WindowObj:AddTableBlock(titleText)
 		local categoryBox = Instance.new("Frame", scroll)
 		categoryBox.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
