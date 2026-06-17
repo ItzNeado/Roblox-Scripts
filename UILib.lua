@@ -1,7 +1,7 @@
 -- GreyField UI Library (Core v1)
 
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+local TweenService = game("TweenService")
+local UserInputService = game("UserInputService")
 
 local Library = {}
 Library.__index = Library
@@ -18,25 +18,22 @@ DarkText = Color3.fromRGB(20,20,20)
 local function Create(class, props)
 local obj = Instance.new(class)
 
-```
 for i,v in pairs(props or {}) do
     obj[i] = v
 end
 
 return obj
-```
 
 end
 
-function Library:SetTheme(newTheme)
+function Library(newTheme)
 for i,v in pairs(newTheme) do
 Theme[i] = v
 end
 end
 
-function Library:CreateWindow(Settings)
+function Library(Settings)
 
-```
 Settings = Settings or {}
 
 local Window = {}
@@ -267,7 +264,6 @@ function Window:CreateTab(Name)
 end
 
 return Window
-```
 
 end
 
