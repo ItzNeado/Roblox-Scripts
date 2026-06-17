@@ -97,25 +97,57 @@ function Library:CreateWindow(settings)
 		Parent = GuiParent
 	})
 
-	local ShadowFrame = Create("Frame", {
+	local Root = Create("Frame", {
 		Parent = ScreenGui,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(770, 520),
-		BackgroundColor3 = Theme.Shadow,
-		BackgroundTransparency = 0.55,
+		Size = UDim2.fromOffset(760, 510),
+		BackgroundTransparency = 1,
 		BorderSizePixel = 0
 	})
-	Corner(ShadowFrame, UDim.new(0, 18))
+
+	local UiScale = Create("UIScale", {
+		Parent = Root,
+		Scale = 1
+	})
+
+	local ShadowLayer = Create("Frame", {
+		Parent = Root,
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 1
+	})
+
+	local Shadow1 = Create("Frame", {
+		Parent = ShadowLayer,
+		Size = UDim2.new(1, 14, 1, 14),
+		Position = UDim2.fromOffset(7, 9),
+		BackgroundColor3 = Theme.Shadow,
+		BackgroundTransparency = 0.78,
+		BorderSizePixel = 0,
+		ZIndex = 1
+	})
+	Corner(Shadow1, UDim.new(0, 18))
+
+	local Shadow2 = Create("Frame", {
+		Parent = ShadowLayer,
+		Size = UDim2.new(1, 8, 1, 8),
+		Position = UDim2.fromOffset(4, 5),
+		BackgroundColor3 = Theme.Shadow,
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		ZIndex = 1
+	})
+	Corner(Shadow2, UDim.new(0, 18))
 
 	local Main = Create("Frame", {
-		Parent = ShadowFrame,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(760, 510),
+		Parent = Root,
+		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundColor3 = Theme.Background,
 		BorderSizePixel = 0,
-		ClipsDescendants = true
+		ClipsDescendants = true,
+		ZIndex = 2
 	})
 	Corner(Main, UDim.new(0, 18))
 	Stroke(Main, 1, Theme.Stroke, 0.25)
@@ -124,7 +156,8 @@ function Library:CreateWindow(settings)
 		Parent = Main,
 		Size = UDim2.new(1, 0, 0, 62),
 		BackgroundColor3 = Theme.Background2,
-		BorderSizePixel = 0
+		BorderSizePixel = 0,
+		ZIndex = 2
 	})
 
 	local TopAccent = Create("Frame", {
@@ -132,7 +165,8 @@ function Library:CreateWindow(settings)
 		Size = UDim2.new(1, 0, 0, 2),
 		Position = UDim2.new(0, 0, 1, -2),
 		BackgroundColor3 = Theme.Accent,
-		BorderSizePixel = 0
+		BorderSizePixel = 0,
+		ZIndex = 3
 	})
 
 	local Title = Create("TextLabel", {
@@ -144,7 +178,8 @@ function Library:CreateWindow(settings)
 		Font = Enum.Font.GothamBold,
 		TextSize = 24,
 		TextColor3 = Theme.Text,
-		TextXAlignment = Enum.TextXAlignment.Left
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3
 	})
 
 	local Subtitle = Create("TextLabel", {
@@ -156,7 +191,8 @@ function Library:CreateWindow(settings)
 		Font = Enum.Font.Gotham,
 		TextSize = 13,
 		TextColor3 = Theme.MutedText,
-		TextXAlignment = Enum.TextXAlignment.Left
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3
 	})
 
 	local Sidebar = Create("Frame", {
@@ -164,7 +200,8 @@ function Library:CreateWindow(settings)
 		Position = UDim2.fromOffset(14, 76),
 		Size = UDim2.fromOffset(190, 420),
 		BackgroundColor3 = Theme.Sidebar,
-		BorderSizePixel = 0
+		BorderSizePixel = 0,
+		ZIndex = 2
 	})
 	Corner(Sidebar, UDim.new(0, 16))
 	Stroke(Sidebar, 1, Theme.Stroke, 0.45)
@@ -172,7 +209,8 @@ function Library:CreateWindow(settings)
 	local SideInner = Create("Frame", {
 		Parent = Sidebar,
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, 0)
+		Size = UDim2.new(1, 0, 1, 0),
+		ZIndex = 2
 	})
 	Padding(SideInner, 10)
 
@@ -184,7 +222,8 @@ function Library:CreateWindow(settings)
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 0,
-		ScrollingDirection = Enum.ScrollingDirection.Y
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ZIndex = 2
 	})
 
 	local TabLayout = Create("UIListLayout", {
@@ -199,7 +238,8 @@ function Library:CreateWindow(settings)
 		Size = UDim2.fromOffset(526, 420),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		ClipsDescendants = true
+		ClipsDescendants = true,
+		ZIndex = 2
 	})
 
 	local Pages = {}
@@ -748,6 +788,28 @@ function Library:CreateWindow(settings)
 
 		return Tab
 	end
+	-- Built-in settings tab (default first tab)
+	local SettingsTab = Window:CreateTab("Settings")
+	Window.SettingsTab = SettingsTab
+
+	local AppearanceSection = SettingsTab:CreateSection("Appearance")
+	AppearanceSection:CreateToggle("Menu Shadow", true, function(state)
+		ShadowLayer.Visible = state
+	end)
+	AppearanceSection:CreateToggle("Accent Bar", true, function(state)
+		TopAccent.Visible = state
+	end)
+	AppearanceSection:CreateSlider("UI Scale", 0.85, 1.15, 1, function(value)
+		UiScale.Scale = value
+	end)
+
+	local WindowSection = SettingsTab:CreateSection("Window")
+	WindowSection:CreateButton("Reset Position", function()
+		Root.Position = UDim2.fromScale(0.5, 0.5)
+	end)
+	WindowSection:CreateButton("Hide Menu", function()
+		ScreenGui.Enabled = false
+	end)
 
 	function Window:SetVisible(state)
 		ScreenGui.Enabled = state and true or false
